@@ -18,3 +18,9 @@ gRPC를 활용한 실시간 채팅 및 번역 서비스 프로젝트입니다.
 2. gRoomAdmin를 킨다.
 3. FullRoomClient를 켜서 방 이름이 같게하고 채팅을 한다.(여러개 가능)
 4. newsbot을 켜서 클라이언트에 가상 뉴스를 뿌려주는지 확인한다.
+
+## 시연영상
+
+
+https://github.com/user-attachments/assets/952e813f-2e15-4bc1-a332-a1248c245960
+
