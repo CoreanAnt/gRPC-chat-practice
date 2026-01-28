@@ -1,0 +1,117 @@
+gRPC 개발 (C# .NET)
+
+1. 프로젝트 생성 및 패키지 설정기본 콘솔 앱 (기반)
+dotnet new console -o [ProjectName]
+
+필수 패키지 설치 (공통).proto 파일을 다루기 위해 기본적으로 필요한 패키지입니다.
+dotnet add package Google.Protobuf
+dotnet add package Grpc.Tools
+
+2. 
+기본 원칙: 무엇을 주고받을지(Message) 결정 후, 어떻게 처리할지(Service) 결정.
+
+유용한 Proto 타입 및 설정기능
+
+Timestamp(시간)
+//타임스탬프 사용방법
+var birthdate = new DateTime(1996, 05, 23);
+emp.BirthDate = Timestamp.FromDateTime(DateTime.SpecifyKind(birthdate, DateTimeKind.Utc));
+
+import "google/protobuf/timestamp.proto";
+필드 선언 예시
+google.protobuf.Timestamp news_time = 1;
+예시
+서비스.cs에서는 아래 추가
+using Google.Protobuf.WellKnownTypes;
+(예제: MsgTime=Timestamp.FromDateTime(DateTime.UtcNow))
+
+Empty(값 없음)
+import "google/protobuf/empty.proto";
+(에제:   rpc StartMonitoring(google.protobuf.Empty) returns (stream ReceivedMessage);)
+서비스.cs에서는 아래 추가
+using Google.Protobuf.WellKnownTypes;
+(예제: public override async Task StartMonitoring(Empty request, IServerStreamWriter<ReceivedMessage> streamWriter, ServerCallContext context))
+
+
+3. 
+gRPC 서버 구현 (Server)생성 및 설정프로젝트 생성:
+dotnet new grpc -o [ServerProjectName]
+Proto 파일 연결: .csproj 파일 수정 (기본 greet.proto 대신 사용).
+<ItemGroup>
+  <Protobuf Include="Protos\groom.proto" GrpcServices="Server" />
+</ItemGroup>
+서비스 파일 만들고 프로그램.cs에서 서비스랑 연결.
+(using gRoom.gRPC.Services; app.MapGrpcService<GroomService>();이런식으로 참조 해야함.)
+
+
+4. 
+gRPC 클라이언트 구현 (Client)생성 및 설정프로젝트 생성:
+dotnet new console -o [ClientProjectName]
+패키지 설치:
+dotnet add package Grpc.Net.Client
+dotnet add package Google.Protobuf
+dotnet add package Grpc.Tools
+
+Proto 파일 연결: 서버의 .proto 파일을 가져온 후 .csproj 수정.
+<ItemGroup>
+  <Protobuf Include="Protos\groom.proto" GrpcServices="Client" />
+</ItemGroup>
+
+VS Code 디버깅 설정 (Console 창 분리)디버깅 시 입출력을 위해 별도 콘솔 창을 띄우는 설정입니다.
+ Ctrl+Shift+P → .NET: Generate Assets for Build and Debug → Select 'No' (수동 설정).
+Launch.json 수정: JSON"console": "externalTerminal"
+
+구현 팁스트리밍 처리: async - await 패턴 사용.Node.js 클라이언트 설정 (필요 시):
+npm init -y
+npm i @grpc/grpc-js @grpc/proto-loader
+
+5. 테스트 및 디버깅 (grpcurl)경로 주의: 
+.proto 파일이 있는 폴더나 루트에서 실행.
+기본 명령어
+HTTP: -plaintext 옵션 사용.
+HTTPS: -insecure 옵션 사용 (개발 인증서 무시).
+
+통신 방식별 테스트 커맨드(@은 데이터 입력 필요 있을때 사용한다.)
+1. 단항 (Unary) 호출
+C:\grpc\grpcurl.exe -plaintext -proto Protos\groom.proto -import-path Protos -d "{\"room_name\": \"MyTestRoom\"}" localhost:5181 groom.Groom/RegisterToRoom
+C:\grpc\grpcurl.exe -plaintext -proto Protos\groom.proto -import-path Protos -d @ localhost:5181 groom.Groom/RegisterToRoom (이후 {"room_name": "MyRoom"} 형식)
+
+https 경우
+C:\grpc\grpcurl.exe -insecure -proto Protos\groom.proto -import-path Protos -d "{\"room_name\": \"MyTestRoom\"}" localhost:5181 groom.Groom/RegisterToRoom
+
+클라이언트 스트림 테스트
+C:\grpc\grpcurl.exe -plaintext -proto Protos\groom.proto -import-path Protos -d @ localhost:5181 groom.Groom/SendNewsFlash (이후 { "news_item": "첫 번째 뉴스 전송" } 형식)
+혹은
+C:\grpc\grpcurl.exe -plaintext -proto Protos\groom.proto -import-path Protos -d "[{\"news_item\": \"News A\"}, {\"news_item\": \"News B\"}]" localhost:5181 groom.Groom/SendNewsFlash
+
+서버측 스트림일 경우 테스트 (당연히 서버 폴더로 들어가야함)
+C:\grpc\grpcurl.exe -plaintext -proto Protos\groom.proto -import-path Protos -d "{}" localhost:5181 groom.Groom/StartMonitoring
+
+양방향 검사
+C:\grpc\grpcurl.exe -plaintext -proto Protos\groom.proto -import-path Protos -d @ localhost:5181 groom.Groom/StartChat
+(예시를 보면 당연히 -d @를 사용해야함 스트림일때는)
+
+
+6. 
+배포 및 문제 해결 (Best Practices)외부 파일 가져오기: 
+.cs나 .csproj를 복사해올 경우, 폴더명과 네임스페이스 일치 확인. 
+라이브러리 버전이 다르면 수정하거나 dotnet restore 실행.
+예외 처리 순서:
+RpcException: 통신상 구체적 오류 처리 (우선).
+Exception: 일반적인 비정상 종료 확인.
+빌드 및 배포:Bashdotnet publish -o publish
+
+
+
+
+[별첨] gRPC-Web (프로젝트 미포함)참고: 
+브라우저에서 gRPC를 호출하기 위한 설정입니다.
+서버 패키지 추가: dotnet add package Grpc.AspNetCore.Web
+프로토콜 설정 (appsettings.json): "Protocols": "Http1AndHttp2"
+JS 컴파일러 설정:protoc 및 protoc-gen-grpc-web 플러그인 다운로드 및 환경변수(Path) 설정.
+Visual C++ 재배포 패키지 필요할 수 있음.
+JS 컴파일 명령어:
+Bashprotoc groom.proto --js_out=import_style=commonjs:. --grpc-web_out=import_style=commonjs,mode=grpcwebtext:.
+클라이언트 빌드:
+npm install
+npx webpack client.js

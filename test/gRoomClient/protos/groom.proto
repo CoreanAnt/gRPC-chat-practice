@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option csharp_namespace = "gRoom.gRPC.Messages";
+package groom;
+
+message RoomRegistrationRequest {
+    string room_name=1;
+}
+
+message RoomRegistrationResponse {
+    int32 room_id=1;
+}
+
+// 등록 서비스
+service Groom {
+  // 클라이언트가 방 등록을 요청하면 무작위 방 번호를 할당하여 반환합니다.
+  rpc RegisterToRoom(RoomRegistrationRequest) returns (RoomRegistrationResponse);
+}

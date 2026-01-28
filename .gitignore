@@ -1,0 +1,18 @@
+# 빌드 결과물 및 임시 파일 제외
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# Node.js 모듈 제외 (newsbot 폴더용)
+node_modules/
+npm-debug.log
+
+# 실행 파일 제외 (소스 코드가 아닌 grpcurl.exe 등)
+*.exe
+*.dll
+
+# Mac/Windows 시스템 파일
+.DS_Store
+Thumbs.db
